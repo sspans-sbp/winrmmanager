@@ -1,0 +1,39 @@
+stages:
+  - lint
+  - test
+  - build
+  - upload
+
+lint:
+  tags:
+    - ''
+  stage: lint
+  image: ''
+  script:
+    - _CI/scripts/lint
+
+test:
+  tags:
+    - ''
+  stage: test
+  image: ''
+  script:
+    - _CI/scripts/test
+
+build:
+  tags:
+    - ''
+  stage: build
+  image: ''
+  script:
+    - _CI/scripts/build
+
+upload:
+  tags:
+    - ''
+  stage: upload
+  image: ''
+  only:
+    - tags
+  script:
+    - _CI/scripts/upload
