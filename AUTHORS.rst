@@ -5,9 +5,11 @@ Credits
 Development Lead
 ----------------
 
-* Gareth Hawker <ghawker@schubergphilis.com>
+* Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>
+
 
 Contributors
 ------------
 
-None yet. Why not be the first?
+* Gareth Hawker <ghawker@schubergphilis.com>
+

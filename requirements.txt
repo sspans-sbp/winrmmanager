@@ -7,3 +7,5 @@
 #
 # Please use Pipfile to update the requirements.
 #
+pywinrm==0.3.0
+requests==2.18.4
