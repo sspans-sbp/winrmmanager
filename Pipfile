@@ -22,3 +22,5 @@ django = "==1.11.10"
 
 [packages]
 
+requests = "==2.18.4"
+pywinrm = "==0.3.0"
