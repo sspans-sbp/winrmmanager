@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File: __init__.py
 #
-# Copyright 2018 Gareth Hawker
+# Copyright 2018 Costas Tyfoxylos
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -23,27 +22,17 @@
 #  DEALINGS IN THE SOFTWARE.
 #
 
-"""
-winrmmanager package
-
-Import all parts from winrmmanager here
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-"""
-from ._version import __version__
-from .winrmmanager import WinRMManager
-
-__author__ = '''Gareth Hawker <ghawker@schubergphilis.com>'''
-__docformat__ = '''google'''
-__date__ = '''2018-07-06'''
-__copyright__ = '''Copyright 2018, Gareth Hawker'''
-__license__ = '''MIT'''
-__maintainer__ = '''Gareth Hawker'''
-__email__ = '''<ghawker@schubergphilis.com>'''
-__status__ = '''Development'''  # "Prototype", "Development", "Production".
-
-# This is to 'use' the module(s), so lint doesn't complain
-assert __version__
-
-assert WinRMManager
+from .library import (execute_command,
+                      setup_logging,
+                      get_project_root_path,
+                      validate_binary_prerequisites,
+                      validate_environment_variable_prerequisites,
+                      is_venv_created,
+                      load_environment_variables,
+                      load_dot_env_file,
+                      clean_up,
+                      save_requirements,
+                      open_file,
+                      bump,
+                      activate_virtual_environment,
+                      get_emojize)

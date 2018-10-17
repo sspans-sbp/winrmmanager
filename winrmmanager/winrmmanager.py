@@ -55,7 +55,7 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-class WinRMManager(object):  # pylint: disable=too-few-public-methods
+class WinRMManager:  # pylint: disable=too-few-public-methods
     """class containing all methods required to setup secure and insecure WinRM sessions"""
 
     def __init__(self,  # pylint: disable=too-many-arguments

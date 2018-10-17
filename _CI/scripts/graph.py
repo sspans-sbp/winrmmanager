@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# File: __init__.py
 #
-# Copyright 2018 Gareth Hawker
+# Copyright 2018 Costas Tyfoxylos
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -23,27 +22,38 @@
 #  DEALINGS IN THE SOFTWARE.
 #
 
-"""
-winrmmanager package
 
-Import all parts from winrmmanager here
+import os
+import logging
+from bootstrap import bootstrap
+from library import execute_command
 
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-"""
-from ._version import __version__
-from .winrmmanager import WinRMManager
+# This is the main prefix used for logging
+LOGGER_BASENAME = '''_CI.graph'''
+LOGGER = logging.getLogger(LOGGER_BASENAME)
+LOGGER.addHandler(logging.NullHandler())
 
-__author__ = '''Gareth Hawker <ghawker@schubergphilis.com>'''
-__docformat__ = '''google'''
-__date__ = '''2018-07-06'''
-__copyright__ = '''Copyright 2018, Gareth Hawker'''
-__license__ = '''MIT'''
-__maintainer__ = '''Gareth Hawker'''
-__email__ = '''<ghawker@schubergphilis.com>'''
-__status__ = '''Development'''  # "Prototype", "Development", "Production".
 
-# This is to 'use' the module(s), so lint doesn't complain
-assert __version__
+def graph():
+    emojize = bootstrap()
+    os.chdir('graphs')
+    create_graph_command = ('pyreverse '
+                            '-o png '
+                            '-A '
+                            '-f PUB_ONLY '
+                            '-p graphs {}').format(os.path.join('..', 'winrmmanager'))
+    exit_code = execute_command(create_graph_command)
+    success = not exit_code
+    if success:
+        LOGGER.info('%s Successfully created graph images %s',
+                    emojize(':white_heavy_check_mark:'),
+                    emojize(':thumbs_up:'))
+    else:
+        LOGGER.error('%s Errors in creation of graph images found! %s',
+                     emojize(':cross_mark:'),
+                     emojize(':crying_face:'))
+    raise SystemExit(exit_code)
 
-assert WinRMManager
+
+if __name__ == '__main__':
+    graph()
