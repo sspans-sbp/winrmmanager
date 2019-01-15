@@ -33,5 +33,5 @@ emoji = "~=0.5.0"
 
 [packages]
 
-requests = "~=2.19.1"
+requests = "~=2.21.0"
 pywinrm = "~=0.3.0"
