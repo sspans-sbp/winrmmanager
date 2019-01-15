@@ -13,3 +13,9 @@ History
 ------------------
 
 * Ported the template part to python 3.7 and dropped support for python 2.7
+
+
+1.0.1 (15-01-2019)
+------------------
+
+* Updated requests module
