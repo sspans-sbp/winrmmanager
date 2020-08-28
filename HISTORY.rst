@@ -19,3 +19,9 @@ History
 ------------------
 
 * Updated requests module
+
+
+1.1.0 (28-08-2020)
+------------------
+
+* bumped pywinrm
