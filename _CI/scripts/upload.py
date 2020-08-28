@@ -38,7 +38,7 @@ def upload():
     if not emojize:
         LOGGER.error('Errors caught on building the artifact, bailing out...')
         raise SystemExit(1)
-    username = os.environ.get('PYPI_UPLOAD_USER')
+    username = os.environ.get('PYPI_UPLOAD_USERNAME')
     password = os.environ.get('PYPI_UPLOAD_PASSWORD')
     upload_command = ('twine upload dist/* '
                       f'-u {username} '
