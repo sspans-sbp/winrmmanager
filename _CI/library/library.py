@@ -28,6 +28,7 @@ import shlex
 import shutil
 import sys
 from collections import namedtuple
+from dataclasses import field
 from subprocess import Popen, PIPE
 
 from pipenv.project import Project
@@ -55,11 +56,62 @@ LOGGER_BASENAME = '''_CI.library'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
-Package = namedtuple('Package', ['name', 'version'])
+class Package:
+    def __init__(self,
+                 name: str,
+                 version: str,
+                 index: str = '',
+                 markers: str = '',
+                 hashes: list = field(default=list)) -> None:
+        self.name = name
+        self.index = index
+        self.markers = markers
+        self.hashes = hashes
+        self.comparator, self.version = self._decompose_full_version(version)
 
-REQUIREMENTS_HEADER = """# 
+    @staticmethod
+    def _decompose_full_version(full_version: str) -> (str, str):
+        comparator = ''
+        version = '*'
+        if full_version == '*':
+            return comparator, version
+        # We need to check for the most common pinning cases
+        # >, <, <=, >=, ~=, ==
+        # So we can know where the pin starts and where it ends,
+        # iteration should start from 2 character then backwards
+        operators = ['<=', '>=', '~=', '==', '<', '>']
+        for operator in operators:
+            if full_version.startswith(operator):
+                break
+        else:
+            raise ValueError(f'Could not find where the comparator pin ends in {full_version}')
+        version = full_version[len(operator):]
+        return operator, version
+
+    @property
+    def full_version(self):
+        return f'{self.comparator}{self.version}'
+
+    @full_version.setter
+    def full_version(self, full_version):
+        self.comparator, self.version = self._decompose_full_version(full_version)
+
+    def compare_versions(self, pipfile_full_version, pipfile_lock_full_version):
+        """Processes the two versions both in Pipfile and Pipfile.lock
+        Matches the pinning from the Pipfile and the exact version from the Pipfile.lock
+        Args:
+            pipfile_full_version (str): The string of the full version specified in the Pipfile
+            pipfile_lock_full_version (str): The string of the full version specified in the Pipfile.lock file
+        Returns:
+        """
+        pipfile_comparator, pipfile_version = self._decompose_full_version(pipfile_full_version)
+        pipfile_lock_comparator, pipfile_lock_version = self._decompose_full_version(pipfile_lock_full_version)
+        self.comparator = pipfile_comparator if pipfile_comparator else '~='
+        self.version = pipfile_lock_version
+
+REQUIREMENTS_HEADER = """#
 # Please do not manually update this file since the requirements are managed
-# by pipenv through Pipfile and Pipfile.lock . 
+# by pipenv through Pipfile and Pipfile.lock .
 #
 # This file is created and managed automatically by the template and it is left
 # here only for backwards compatibility reasons with python's ecosystem.
@@ -244,10 +296,28 @@ def clean_up(items):
         else:
             LOGGER.warning('Unable to remove file or directory "%s"', item)
 
+def format_marker(marker):
+    return f' ; {marker}' if marker else ''
+
+def _get_packages(top_level_packages, packages):
+    pkg = []
+    for top_level_package in top_level_packages:
+        package = next((item for item in packages if item.name == top_level_package.name), None)
+        if not package:
+            raise ValueError(f'Package name "{top_level_package.name}" not found in Pipfile.lock')
+        package.compare_versions(top_level_package.full_version, package.full_version)
+        pkg.append(package)
+    return pkg
 
 def get_top_level_dependencies():
-    packages = Project().parsed_pipfile.get('packages', {}).keys()
-    dev_packages = Project().parsed_pipfile.get('dev-packages', {}).keys()
+    pip_packages = Project().parsed_pipfile.get('packages', {}).items()
+    packages = [Package(name_, version_) if isinstance(version_, str) else Package(name_, **version_)
+                for name_, version_ in pip_packages]
+    pip_dev_packages = Project().parsed_pipfile.get('dev-packages', {}).items()
+    dev_packages = [Package(name_, version_) if isinstance(version_, str) else Package(name_, **version_)
+                   for name_, version_ in pip_dev_packages]
+    LOGGER.debug('Packages in Pipfile: %s', packages)
+    LOGGER.debug('Development packages in Pipfile: %s', dev_packages)
     return packages, dev_packages
 
 
@@ -255,36 +325,42 @@ def get_all_packages():
     try:
         venv_parent = get_venv_parent_path()
         lock_file = os.path.join(venv_parent, 'Pipfile.lock')
-        all_packages = json.loads(open(lock_file, 'r').read())
+        with open(lock_file, 'r') as lock:
+            all_packages = json.loads(lock.read())
     except FileNotFoundError:
         LOGGER.error('Could not open Pipfile.lock, so cannot get dependencies, exiting...')
         raise SystemExit(1)
-    packages = [Package(package_name, data.get('version'))
+    packages = [Package(package_name,
+                        data.get('version'),
+                        data.get('index'),
+                        data.get('markers'),
+                        data.get('hashes', []))
                 for package_name, data in all_packages.get('default').items()]
-    dev_packages = [Package(package_name, data.get('version'))
+    dev_packages = [Package(package_name,
+                            data.get('version'),
+                            data.get('index'),
+                            data.get('markers'),
+                            data.get('hashes', []))
                     for package_name, data in all_packages.get('develop').items()]
     return packages, dev_packages
-
 
 def save_requirements():
     top_level_packages, top_level_dev_packages = get_top_level_dependencies()
     all_packages, all_dev_packages = get_all_packages()
-    packages = [package for package in all_packages
-                if package.name in top_level_packages]
-    dev_packages = [package for package in all_dev_packages
-                    if package.name in top_level_dev_packages]
     venv_parent = get_venv_parent_path()
     requirements_file = os.path.join(venv_parent, 'requirements.txt')
     with open(requirements_file, 'w') as f:
-        requirements = '\n'.join(['{}{}'.format(package.name, package.version.replace('==', '~='))
-                                  for package in sorted(packages, key=lambda x: x.name)])
+        requirements = '\n'.join([f'{package.name}{package.full_version}{format_marker(package.markers)}'
+                                  for package in _get_packages(top_level_packages, all_packages)])
+
         f.write(REQUIREMENTS_HEADER + requirements)
     dev_requirements_file = os.path.join(venv_parent, 'dev-requirements.txt')
     with open(dev_requirements_file, 'w') as f:
-        dev_requirements = '\n'.join(['{}{}'.format(package.name, package.version.replace('==', '~='))
-                                      for package in sorted(dev_packages, key=lambda x: x.name)])
-        f.write(REQUIREMENTS_HEADER + dev_requirements)
+        dev_requirements = '\n'.join(
+            [f'{package.name}{package.full_version}{format_marker(package.markers)}'
+             for package in _get_packages(top_level_dev_packages, all_dev_packages)])
 
+        f.write(REQUIREMENTS_HEADER + dev_requirements)
 
 def get_version_file_path():
     return os.path.abspath(os.path.join(os.path.dirname(__file__),
